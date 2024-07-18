@@ -1,0 +1,178 @@
+Create 2 EC-2 (Linux) 1- VM
+              2- MONITORING
+Connect MONITORING Server and downloand and setup these below requirenments:-
+
+SETUP PROMETHEUS
+
+wget https://github.com/prometheus/prometheus/releases/download/v2.53.1/prometheus-2.53.1.linux-amd64.tar.gz
+unzip and move
+
+SETUP BLACKBOX_EXPORTER
+
+wget https://github.com/prometheus/consul_exporter/releases/download/v0.12.0/consul_exporter-0.12.0.linux-amd64.tar.gz
+unzip ans rename
+
+SETUP ALERT_MANAGER
+
+wget https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz
+unzip and rename
+
+Connect VM Server download ans setup:-
+
+git clone (repository url of project Boardgame)
+wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-amd64.tar.gz
+unzip and rename
+Go inside node_exporter
+./node_exporter &              #to execute and (&) it is for to run in backgroung, by default it runs in port number 9100
+copy Public IP of VM Server with 9100 and browse it. It should and and we can check metrics aswell.
+
+SETUP JAVA AND MAVEN
+cd ..
+Go inside Boardgame application and then
+Downloand java
+apt install maven -y
+mvn package       # to build the project
+ls
+cd target/
+java -jar (name of the jar file)          #To extract jar file
+Copy Public IP of Server and browse with port 8080, website should run
+
+
+NOW SWITCH TO MONITORING SERVER
+
+ls
+cd prometheus
+ls
+./ prometheus & 
+Copy public IP of same server and browse with port 9090
+Now check in prometheus website:-
+status
+targets
+status 
+rules   #As we checked we did have rules set fot alert now we will set alert rules
+Get out of promrtheus
+cd ..
+ls
+cd alert_manager
+ls
+check yml file
+vi (name of yml file)
+now we will setup alert rules for that we have to go inside prometheus again
+cd ..
+ls
+cd prometheus            #make one file to setup rules in prometheus
+vi alert_rules.yml
+YML FILE
+
+---
+groups:
+  - name: alert_rules
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Endpoint  {{ $labels.instance }} down
+          description: " {{ $labels.instance }} of job {{ labels.job }} has been down for
+            more than 1 minute."
+      - alert: WebsiteDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Website down
+          description: The website at {{ $labels.instance }} is down.
+      - alert: HostOutOfMemory
+        expr: node_memory_MemAvailable /node_memory_MemTotal * 100 < 25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of memory (instance {{ $labels.instance }})
+          description: |-
+            Node Memory is filling up (< 25% left)
+             VALUE = {{ $value }}
+             LABELS: {{ $LABELS }}
+      - alert: HostOutOFDiskSpace
+        expr: (node_filesystem_avail{mountport="/"} * 100) /
+          node_filesystem_size{mountport="/"} < 50
+        for: 1s
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of disk space (instance {{ $labels.instance }})
+          description: |-
+            Disk is almost full  (< 50% left)
+             VALUE = {{ $value }}
+             LABELS: {{ $LABELS }}
+      - alert: HostHighCpuLoad
+        expr: (sum by
+          (instance)(irate(node_cpu{job="node_exporter_metrics",mode="idle"}[5m])))
+          > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host high CPU load (instance {{ $labels.instance }})
+          description: |-
+            CPU Load is > 80%
+             VALUE = {{ $value }}
+             LABELS: {{ $LABELS }}
+      - alert: ServiceUnavailable
+        expr: up{job="node_exporter"}  == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Service Unavailable(instance {{ $labels.instance }})
+          description: |-
+            The Service {{ $labels.job }} is not available
+              VALUE = {{ $value }}
+             LABELS: {{ $LABELS }}
+      - alert: HighMemoryUsage
+        expr: (node_memory_Active / node_memory_MemTotal) * 100 > 90
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: High Memory Usage (instance {{ $labels.instance }})
+          description: |-
+            Memory Usage is > 90%
+             VALUE = {{ $value }}
+             LABELS: {{ $LABELS }}
+      - alert: FileSystemFull
+        expr: (node_filesystem_avail / node_filesystem_size) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: File System Almost Full (instance {{ $labels.instance }})
+          description: |-
+            File System has < 10% free space
+             VALUE = {{ $value }}
+             LABELS: {{ $LABELS }}
+
+
+Verify yml file in YAMLINT Validator then copy and paste in vi alert_rules.yml file and save.
+Now go to vi prometheus.yml
+In rule file sections uncomment, edit and give file name (alert_rule.yml)
+save
+cd ..
+cd alert_manager 
+./alert_manager &
+Now copy Public IP with port exposed 9093 and browse
+Here we can check status as well as alert rules
+Now we have to restart pometheus cd ..
+ls
+cd prometheus
+ls
+pgerp prometheus
+kill proccess id 
+./prometheus &
+Go back to prometheus page in browser and refresh the page check alert rules it should visible now.
+
+
+
