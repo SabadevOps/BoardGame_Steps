@@ -1,4 +1,4 @@
-Create 2 EC-2 (Linux) 1- VM
+Create 2 EC-2 (Ubuntu with 20gb CPU) 1- VM
               2- MONITORING
 Connect MONITORING Server and downloand and setup these below requirenments:-
 
