@@ -176,3 +176,13 @@ Go back to prometheus page in browser and refresh the page check alert rules it 
 
 
 
+###################
+---
+- job_name: node-exporter
+  static_configs:
+    - targets:
+        - 52.63.132.65:9100
+#####################
+
+
+
