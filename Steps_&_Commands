@@ -17,7 +17,7 @@ SETUP ALERT_MANAGER
 wget https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz
 unzip and rename
 
-Connect VM Server download ans setup:-
+############Connect VM Server download ans setup#####################
 
 git clone (repository url of project Boardgame)
 wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-amd64.tar.gz
@@ -176,6 +176,30 @@ Go back to prometheus page in browser and refresh the page check alert rules it 
     - targets:
         - 52.63.132.65:9100
 #####################
+
+##########BLACK_BOX ADDINTION###########
+
+---
+- job_name: blackbox
+  metrics_path: /probe
+  params:
+    module:
+      - http_2xx
+  static_configs:
+    - targets:
+        - http://prometheus.io
+        - https://prometheus.io
+        - http://3.107.27.180:8080/
+  relabel_configs:
+    - source_labels:
+        - __address__
+      target_label: __param_target
+    - source_labels:
+        - __param_target
+      target_label: instance
+    - target_label: __address__
+      replacement: 13.211.209.210:9115
+
 
 
 
