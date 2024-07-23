@@ -1,4 +1,4 @@
-Create 2 EC-2 (Ubuntu with 20gb CPU) 1- VM
+Create 2 EC-2 (Ubuntu, T2.Medium with 20gb CPU) 1- VM
               2- MONITORING
 Connect MONITORING Server and downloand and setup these below requirenments:-
 
@@ -62,11 +62,11 @@ cd ..
 ls
 cd prometheus            #make one file to setup rules in prometheus
 vi alert_rules.yml
-YML FILE
+*******************YML FILE STARTED***********************
 
 ---
 groups:
-  - name: alert_rules
+  - name: instance_down_alerts
     rules:
       - alert: InstanceDown
         expr: up == 0
@@ -74,86 +74,79 @@ groups:
         labels:
           severity: critical
         annotations:
-          summary: Endpoint  {{ $labels.instance }} down
-          description: " {{ $labels.instance }} of job {{ labels.job }} has been down for
+          summary: Instance {{ $labels.instance }} down
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for
             more than 1 minute."
       - alert: WebsiteDown
         expr: probe_success == 0
-        for: 1m
+        for: 5m
         labels:
           severity: critical
         annotations:
-          summary: Website down
-          description: The website at {{ $labels.instance }} is down.
+          summary: Website {{ $labels.instance }} is down
+          description: The website {{ $labels.instance }} has been unreachable for more
+            than 5 minutes.
       - alert: HostOutOfMemory
-        expr: node_memory_MemAvailable /node_memory_MemTotal * 100 < 25
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.05
         for: 5m
         labels:
-          severity: warning
+          severity: critical
         annotations:
           summary: Host out of memory (instance {{ $labels.instance }})
-          description: |-
-            Node Memory is filling up (< 25% left)
-             VALUE = {{ $value }}
-             LABELS: {{ $LABELS }}
-      - alert: HostOutOFDiskSpace
-        expr: (node_filesystem_avail{mountport="/"} * 100) /
-          node_filesystem_size{mountport="/"} < 50
-        for: 1s
+          description: Host {{ $labels.instance }} has less than 5% memory available for
+            more than 5 minutes.
+      - alert: HostOutOfDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} /
+          node_filesystem_size_bytes{mountpoint="/"}) < 0.10
+        for: 5m
         labels:
-          severity: warning
+          severity: critical
         annotations:
           summary: Host out of disk space (instance {{ $labels.instance }})
-          description: |-
-            Disk is almost full  (< 50% left)
-             VALUE = {{ $value }}
-             LABELS: {{ $LABELS }}
+          description: Host {{ $labels.instance }} has less than 10% disk space available
+            for more than 5 minutes.
       - alert: HostHighCpuLoad
-        expr: (sum by
-          (instance)(irate(node_cpu{job="node_exporter_metrics",mode="idle"}[5m])))
-          > 80
+        expr: avg(node_load1) by (instance) / count(node_cpu_seconds_total{mode="idle"})
+          by (instance) > 0.85
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: Host high CPU load (instance {{ $labels.instance }})
-          description: |-
-            CPU Load is > 80%
-             VALUE = {{ $value }}
-             LABELS: {{ $LABELS }}
+          description: Host {{ $labels.instance }} has a high CPU load (1-minute load
+            average is over 85% of total CPU capacity) for more than 5 minutes.
       - alert: ServiceUnavailable
-        expr: up{job="node_exporter"}  == 0
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: Service Unavailable(instance {{ $labels.instance }})
-          description: |-
-            The Service {{ $labels.job }} is not available
-              VALUE = {{ $value }}
-             LABELS: {{ $LABELS }}
-      - alert: HighMemoryUsage
-        expr: (node_memory_Active / node_memory_MemTotal) * 100 > 90
-        for: 10m
-        labels:
-          severity: critical
-        annotations:
-          summary: High Memory Usage (instance {{ $labels.instance }})
-          description: |-
-            Memory Usage is > 90%
-             VALUE = {{ $value }}
-             LABELS: {{ $LABELS }}
-      - alert: FileSystemFull
-        expr: (node_filesystem_avail / node_filesystem_size) * 100 < 10
+        expr: probe_success == 0
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: File System Almost Full (instance {{ $labels.instance }})
-          description: |-
-            File System has < 10% free space
-             VALUE = {{ $value }}
-             LABELS: {{ $LABELS }}
+          summary: Service is unavailable (instance {{ $labels.instance }})
+          description: The service {{ $labels.instance }} has been unavailable for more
+            than 5 minutes.
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) /
+          node_memory_MemTotal_bytes > 0.90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host high memory usage (instance {{ $labels.instance }})
+          description: Host {{ $labels.instance }} is using more than 90% of its memory
+            for more than 5 minutes.
+      - alert: FileSystemFull
+        expr: (node_filesystem_size_bytes{fstype!~"tmpfs|aufs|overlay"} -
+          node_filesystem_free_bytes{fstype!~"tmpfs|aufs|overlay"}) /
+          node_filesystem_size_bytes{fstype!~"tmpfs|aufs|overlay"} > 0.90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Filesystem nearly full (instance {{ $labels.instance }})
+          description: The filesystem on {{ $labels.instance }} is more than 90% full for
+            more than 5 minutes.
+
+*********************YML FILE ENDED****************************
 
 
 Verify yml file in YAMLINT Validator then copy and paste in vi alert_rules.yml file and save.
